@@ -8,6 +8,7 @@ import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.module.annotations.ReactModule;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
@@ -30,6 +31,15 @@ import com.facebook.react.bridge.UiThreadUtil;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.RectF;
+import android.graphics.Typeface;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.util.Base64;
 
 import java.util.concurrent.ExecutorService;
@@ -39,6 +49,9 @@ import java.util.TimerTask;
 import com.facebook.react.bridge.WritableMap;
 import android.os.Handler;
 import java.util.concurrent.Callable;
+import net.glxn.qrgen.android.QRCode;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+
 
 class PrintingCommands {
   public static final int COMMAND_ADD_TEXT = 0;
@@ -449,6 +462,100 @@ public class EscPosPrinterModule extends ReactContextBaseJavaModule implements R
     });
   }
 
+  @ReactMethod
+  public void printQUEUE(ReadableArray printCommands,  Promise promise) {
+    tasksQueue.submit(new Runnable() {
+      @Override
+      public void run() {
+        createPrintData(printCommands, new MyCallbackInterface() {
+          @Override
+          public void onSuccess(String result) {
+            promise.resolve(result);
+          }
+
+          @Override
+          public void onError(String result) {
+            promise.reject(result);
+          }
+        });
+      }
+    });
+  }
+
+  private void createPrintData(ReadableArray printCommands, MyCallbackInterface callback) {
+    if (mPrinter == null) {
+      String errorString = EscPosPrinterErrorManager.getEposExceptionText(Epos2Exception.ERR_PARAM);
+      callback.onError(errorString);
+    }
+
+    for (int i = 0; i < printCommands.size(); i++) {
+      ReadableMap command = printCommands.getMap(i);
+
+      byte[] feed = "\n\n\n\n\n".getBytes();
+
+      try {
+        if (command.hasKey("appendBitmapText")) {
+          int fontSize = (command.hasKey("fontSize")) ? command.getInt("fontSize") * 2 : 25;
+          boolean diffusion = (command.hasKey("diffusion")) ? command.getBoolean("diffusion") : true;
+          int width = (command.hasKey("width")) ? command.getInt("width") : 576;
+          boolean bothScale = (command.hasKey("bothScale")) ? command.getBoolean("bothScale") : true;
+          String text = command.getString("appendBitmapText");
+          Typeface typeface = Typeface.createFromAsset(reactContext.getAssets(), "fonts/Inconsolata-Regular.ttf");
+          Bitmap bitmap = createBitmapFromText(text, fontSize, width, typeface);
+          mPrinter.addImage(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT);
+        } else if (command.hasKey("appendInversedBitmapText")) {
+          int fontSize = (command.hasKey("fontSize")) ? command.getInt("fontSize") * 2 : 25;
+          boolean diffusion = (command.hasKey("diffusion")) ? command.getBoolean("diffusion") : true;
+          int width = (command.hasKey("width")) ? command.getInt("width") : 576;
+          boolean bothScale = (command.hasKey("bothScale")) ? command.getBoolean("bothScale") : true;
+          String text = command.getString("appendInversedBitmapText");
+          Typeface typeface = Typeface.createFromAsset(reactContext.getAssets(), "fonts/Inconsolata-Regular.ttf");
+          Bitmap bitmap = createInversedBitmapFromText(text, fontSize, width, typeface);
+          mPrinter.addImage(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT);
+        } else if (command.hasKey("multiQrCode")) {
+          String qrLeft = command.getString("appendQrCodeLeft");
+          String qrRight = command.getString("appendQrCodeRight");
+          Bitmap bitmap = createMultiQrCode(qrLeft, qrRight);
+          mPrinter.addImage(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT);
+        } else if (command.hasKey("appendCutPaper")) {
+          mPrinter.addCut(Printer.PARAM_DEFAULT);
+        } else if (command.hasKey("appendInvoiceBarcode")) {
+          byte[] barCodeInit = new byte[]{0x1d, 0x77, 0x01, 0x1d, 0x68, 0x32, 0x1d, 0x6b, 0x04};
+          byte[] barCode = command.getString("appendInvoiceBarcode").getBytes();
+          byte[] end = new byte[]{0x00};
+
+          mPrinter.addCommand(barCodeInit);
+          mPrinter.addCommand(barCode);
+          mPrinter.addCommand(end);
+        } else if (command.hasKey("appendSound")) {
+          mPrinter.addSound(Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT);
+        } else if (command.hasKey("appendBitmap")) {
+          String uriString = command.getString("appendBitmap");
+          final String pureBase64Encoded = uriString.substring(uriString.indexOf(",") + 1);
+          byte[] decodedString = Base64.decode(pureBase64Encoded, Base64.DEFAULT);
+          Bitmap bitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+          Bitmap resized = Bitmap.createScaledBitmap(bitmap, 400, 80, true);
+          mPrinter.addImage(resized, 0, 0, resized.getWidth(), resized.getHeight(), Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT, Printer.PARAM_DEFAULT);
+        } else if (command.hasKey("appendUnitFeed")) {
+          mPrinter.addFeedUnit(command.getInt("appendUnitFeed"));
+        }
+      } catch (Epos2Exception e) {
+        int status = EscPosPrinterErrorManager.getErrorStatus(e);
+        String errorString = EscPosPrinterErrorManager.getEposExceptionText(status);
+        callback.onError(errorString);
+      }
+    }
+    try {
+      this.printData();
+      String successString = EscPosPrinterErrorManager.getCodeText(Epos2CallbackCode.CODE_SUCCESS);
+      callback.onSuccess(successString);
+    } catch (Epos2Exception e) {
+      int status = EscPosPrinterErrorManager.getErrorStatus(e);
+      String errorString = EscPosPrinterErrorManager.getEposExceptionText(status);
+      callback.onError(errorString);
+    }
+  }
+
   public void printFromBuffer(ReadableArray printBuffer, MyCallbackInterface callback) {
     if (mPrinter == null) {
       String errorString = EscPosPrinterErrorManager.getEposExceptionText(Epos2Exception.ERR_PARAM);
@@ -551,5 +658,88 @@ public class EscPosPrinterModule extends ReactContextBaseJavaModule implements R
       Printer.PARAM_DEFAULT,
       Printer.COMPRESS_AUTO
     );
+  }
+
+  private Bitmap createBitmapFromText(String printText, int textSize, int printWidth, Typeface typeface) {
+    Paint paint = new Paint();
+    Bitmap bitmap;
+    Canvas canvas;
+
+    paint.setTextSize(textSize);
+    paint.setTypeface(typeface);
+    paint.getTextBounds(printText, 0, printText.length(), new Rect());
+
+    TextPaint textPaint = new TextPaint(paint);
+    android.text.StaticLayout staticLayout = new StaticLayout(printText, textPaint, printWidth,
+      Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
+
+    // Create bitmap
+    bitmap = Bitmap.createBitmap(staticLayout.getWidth(), staticLayout.getHeight(), Bitmap.Config.ARGB_8888);
+
+    // Create canvas
+    canvas = new Canvas(bitmap);
+    canvas.drawColor(Color.WHITE);
+    canvas.translate(0, 0);
+    staticLayout.draw(canvas);
+
+    return bitmap;
+  }
+
+  private Bitmap createInversedBitmapFromText(String printText, int textSize, int printWidth, Typeface typeface) {
+    Paint paint = new Paint();
+    Paint strokePaint = new Paint();
+    Bitmap bitmap;
+    Canvas canvas;
+
+    paint.setTextSize(textSize);
+    paint.setTypeface(typeface);
+    paint.getTextBounds(printText, 0, printText.length(), new Rect());
+
+    strokePaint.setStyle(Paint.Style.STROKE);
+    strokePaint.setColor(Color.BLACK);
+    strokePaint.setStrokeWidth(10);
+
+
+    TextPaint textPaint = new TextPaint(paint);
+    android.text.StaticLayout staticLayout = new StaticLayout(printText, textPaint, printWidth,
+      Layout.Alignment.ALIGN_NORMAL, 1, 0, false);
+
+    // Create bitmap
+    bitmap = Bitmap.createBitmap(staticLayout.getWidth(), staticLayout.getHeight(), Bitmap.Config.ARGB_8888);
+
+    RectF r = new RectF(0, 0, bitmap.getWidth(), bitmap.getHeight());
+
+    // Create canvas
+    canvas = new Canvas(bitmap);
+    canvas.drawColor(Color.WHITE);
+
+
+    canvas.translate(0, 0);
+
+    // Draw border
+    int cornerRadius = 10;
+    canvas.drawRoundRect(r, cornerRadius, cornerRadius, strokePaint);
+
+    staticLayout.draw(canvas);
+
+    return bitmap;
+  }
+
+  private Bitmap createMultiQrCode(String qrLeft, String qrRight) {
+//        Paint paint = new Paint();
+    Bitmap bitmap;
+    Canvas canvas;
+
+    Bitmap qrLeftCode = QRCode.from(qrLeft).withErrorCorrection(ErrorCorrectionLevel.L).withCharset("UTF-8").withSize(200, 200).bitmap();
+    Bitmap qrRightCode = QRCode.from(qrRight).withErrorCorrection(ErrorCorrectionLevel.L).withCharset("UTF-8").withSize(200, 200).bitmap();
+
+    // Create canvas
+    bitmap = Bitmap.createBitmap(400, 200, Bitmap.Config.ARGB_8888);
+
+    canvas = new Canvas(bitmap);
+    canvas.drawBitmap(qrLeftCode, 0, 0, null);
+    canvas.drawBitmap(qrRightCode, 200, 0, null);
+
+    return bitmap;
   }
 }

@@ -48,8 +48,9 @@ repositories {
         // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
         url("$rootDir/../node_modules/react-native/android")
     }
-    google()
-    jcenter()
+  maven { url "https://www.jitpack.io" }
+  google()
+  jcenter()
 }
 
 dependencies {
@@ -57,4 +58,6 @@ dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation "com.facebook.react:react-native:+"  // From node_modules
     implementation 'com.google.android.gms:play-services-location:17.1.0'
+    implementation 'com.google.zxing:core:3.2.1'
+    implementation 'com.github.kenglxn.QRGen:android:2.6.0'
 }
