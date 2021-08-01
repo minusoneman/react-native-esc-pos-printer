@@ -167,6 +167,101 @@ RCT_EXPORT_METHOD(printBuffer: (NSArray *)printBuffer
     }];
 }
 
+RCT_EXPORT_METHOD(printQUEUE: (NSArray *)printCommands
+                  withResolver:(RCTPromiseResolveBlock)resolve
+                  withRejecter:(RCTPromiseRejectBlock)reject)
+{
+    [tasksQueue addOperationWithBlock: ^{
+        [self createPrintData:printCommands onSuccess:^(NSString *result) {
+                resolve(result);
+            } onError:^(NSString *error) {
+                reject(@"event_failure",error, nil);
+        }];
+    }];
+}
+
+- (void)createPrintData: (NSArray *)printCommands onSuccess: (void(^)(NSString *))onSuccess onError: (void(^)(NSString *))onError
+{
+  int result = EPOS2_SUCCESS;
+  NSError *error = nil;
+  
+  for(id command in printCommands){
+    if ([command valueForKey:@"appendBitmap"]) {
+      NSString *urlString = [command valueForKey:@"appendBitmap"];
+      NSInteger width = ([command valueForKey:@"width"]) ? [[command valueForKey:@"width"] intValue] : 380;
+      NSURL *imageURL = [NSURL URLWithString:urlString];
+      NSData *imageData = [NSData dataWithContentsOfURL:imageURL options:NSDataReadingUncached error:&error];
+      
+      CGSize newSize = CGSizeMake(width,75.0);
+      UIImage *image = [UIImage imageWithData:imageData];
+      UIImage *test = [self imageWithImage:image scaledToSize:newSize];
+      
+      result = [printer addImage:test x:0 y:0 width: test.size.width height: test.size.height color: EPOS2_PARAM_DEFAULT mode:EPOS2_PARAM_DEFAULT halftone:EPOS2_PARAM_DEFAULT brightness:EPOS2_PARAM_DEFAULT compress:EPOS2_PARAM_DEFAULT];
+    } else if([command valueForKey:@"appendAlignment"]){
+      //    NSString *alignment = [command valueForKey:@"data"] == @"Center" ? EPOS2_ALIGN_CENTER : EPOS2_ALIGN_LEFT;
+      result = [printer addTextAlign:EPOS2_ALIGN_LEFT];
+    } else if([command valueForKey:@"openCashDrawer"]) {
+      result = [printer addPulse:EPOS2_PARAM_DEFAULT time:EPOS2_PARAM_DEFAULT];
+    } else if ([command valueForKey:@"appendCutPaper"]) {
+      result = [printer addCut:EPOS2_CUT_FEED];
+    } else if ([command valueForKey:@"appendBitmapText"]) {
+      NSString *text = [command valueForKey:@"appendBitmapText"];
+      NSInteger width = ([command valueForKey:@"width"]) ? [[command valueForKey:@"width"] intValue] : 576;
+      NSString *fontName = ([command valueForKey:@"font"]) ? [command valueForKey:@"font"] : @"Inconsolata-Regular";
+      NSInteger fontSize = ([command valueForKey:@"fontSize"]) ? [[command valueForKey:@"fontSize"] intValue] : 12;
+      
+      UIFont *font = [UIFont fontWithName:fontName size:fontSize * 2];
+      UIImage *image = [self imageWithString:text font:font width:width];
+      result =[printer addImage:image x:0 y:0 width:image.size.width height:image.size.height color:EPOS2_PARAM_DEFAULT mode:EPOS2_PARAM_DEFAULT halftone:EPOS2_PARAM_DEFAULT brightness:EPOS2_PARAM_DEFAULT compress:EPOS2_PARAM_DEFAULT];
+    } else if ([command valueForKey:@"appendInversedBitmapText"]) {
+      NSString *text = [command valueForKey:@"appendInversedBitmapText"];
+      NSInteger width = ([command valueForKey:@"width"]) ? [[command valueForKey:@"width"] intValue] : 576;
+      NSString *fontName = ([command valueForKey:@"font"]) ? [command valueForKey:@"font"] : @"Inconsolata-Regular";
+      NSInteger fontSize = ([command valueForKey:@"fontSize"]) ? [[command valueForKey:@"fontSize"] intValue] : 12;
+      
+      UIFont *font = [UIFont fontWithName:fontName size:fontSize * 2];
+      UIImage *image = [self inversedImageWithString:text font:font width:width];
+      
+      result =[printer addImage:image x:0 y:0 width:image.size.width height:image.size.height color:EPOS2_PARAM_DEFAULT mode:EPOS2_PARAM_DEFAULT halftone:EPOS2_PARAM_DEFAULT brightness:EPOS2_PARAM_DEFAULT compress:EPOS2_PARAM_DEFAULT];
+    } else if ([command valueForKey:@"multiQrCode"]) {
+      NSString *qrLeft = [command valueForKey:@"appendQrCodeLeft"];
+      NSString *qrRight = [command valueForKey:@"appendQrCodeRight"];
+      UIImage *image = [self multiQrCode:qrLeft string:qrRight];
+      
+      result =[printer addImage:image x:0 y:0 width:image.size.width height:image.size.height color:EPOS2_PARAM_DEFAULT mode:EPOS2_PARAM_DEFAULT halftone:EPOS2_PARAM_DEFAULT brightness:EPOS2_PARAM_DEFAULT compress:EPOS2_PARAM_DEFAULT];
+    } else if ([command valueForKey:@"appendInvoiceBarcode"]) {
+      NSString *barCodeString = [command valueForKey:@"appendInvoiceBarcode"];
+      
+      const char initCommands[] = { 0x1d, 0x77, 0x01, 0x1d, 0x68, 0x32, 0x1d, 0x6b, 0x04 };
+      const char finalCommands[] = { 0x00 };
+      
+      NSData *barcodeData  = [barCodeString dataUsingEncoding:NSUTF8StringEncoding];
+      NSData *initData = [NSData dataWithBytes:initCommands length: 9];
+      NSData *finalData = [NSData dataWithBytes:finalCommands length:1];
+      //    result = [printer addBarcode:barCodeString type:EPOS2_BARCODE_CODE39 hri:EPOS2_HRI_BOTH font:EPOS2_FONT_A width:2 height:50];
+      result = [printer addCommand:initData];
+      result = [printer addCommand:barcodeData];
+      result = [printer addCommand:finalData];
+    } else if ([command valueForKey:@"appendSound"]) {
+      result = [printer addSound:EPOS2_PATTERN_A repeat:EPOS2_PARAM_DEFAULT cycle:EPOS2_PARAM_DEFAULT];
+    } else if ([command valueForKey:@"appendUnitFeed"]) {
+      result = [printer addFeedUnit: [[command valueForKey:@"appendUnitFeed"] intValue]];
+    }
+  }
+    
+    result = [self printData];
+    
+    if (result != EPOS2_SUCCESS) {
+            NSString *errorString = [ErrorManager getEposErrorText: result];
+            onError(errorString);
+            return;
+        }
+
+        [self->printer clearCommandBuffer];
+        NSString *successString = [ErrorManager getEposErrorText: EPOS2_SUCCESS];
+        onSuccess(successString);
+}
+
 
 
 - (void) onPtrReceive:(Epos2Printer *)printerObj code:(int)code status:(Epos2PrinterStatusInfo *)status printJobId:(NSString *)printJobId
@@ -572,6 +667,144 @@ RCT_EXPORT_METHOD(printBuffer: (NSArray *)printBuffer
     [self->printer clearCommandBuffer];
     NSString *successString = [ErrorManager getEposErrorText: EPOS2_SUCCESS];
     onSuccess(successString);
+}
+
+- (UIImage*)imageWithImage:(UIImage*)image
+              scaledToSize:(CGSize)newSize;
+{
+  UIGraphicsBeginImageContext( newSize );
+  [image drawInRect:CGRectMake(0,0,newSize.width,newSize.height)];
+  UIImage* newImage = UIGraphicsGetImageFromCurrentImageContext();
+  UIGraphicsEndImageContext();
+  return newImage;
+}
+
+- (UIImage *)multiQrCode:(NSString *)qrLeftString string:(NSString *)qrRightString {
+  
+  CGSize size = CGSizeMake(350, 150);
+  
+  // QR Left
+  CIFilter *qrLeftFilter = [CIFilter filterWithName:@"CIQRCodeGenerator"];
+  NSData *qrLeftData = [qrLeftString dataUsingEncoding:NSUTF8StringEncoding];
+  
+  [qrLeftFilter setValue: qrLeftData forKey:@"inputMessage"];
+  [qrLeftFilter setValue:@"L" forKey: @"inputCorrectionLevel"];
+  
+  CIImage *qrLeftImage = qrLeftFilter.outputImage;
+  UIImage *leftQR = [[UIImage alloc] initWithCIImage:qrLeftImage];
+  
+  // QR Right
+  CIFilter *qrRightFilter = [CIFilter filterWithName:@"CIQRCodeGenerator"];
+  NSData * qrRightData = [qrRightString dataUsingEncoding:NSUTF8StringEncoding];
+  
+  [qrRightFilter setValue: qrRightData forKey:@"inputMessage"];
+  [qrRightFilter setValue:@"L" forKey: @"inputCorrectionLevel"];
+  
+  CIImage *qrRightImage = qrRightFilter.outputImage;
+  UIImage *rightQR = [[UIImage alloc] initWithCIImage:qrRightImage];
+  
+  
+  UIGraphicsBeginImageContext(size);
+  
+  [leftQR drawInRect:CGRectMake(0, 0, 150, 150)];
+  
+  [rightQR drawInRect:CGRectMake(200, 0, 150, 150)];
+  
+  UIImage *qrCodesImage = UIGraphicsGetImageFromCurrentImageContext();
+  
+  UIGraphicsEndImageContext();
+  
+  return qrCodesImage;
+};
+
+
+
+- (UIImage *)imageWithString:(NSString *)string font:(UIFont *)font width:(CGFloat)width {
+  NSDictionary *attributeDic = @{NSFontAttributeName:font};
+  
+  CGSize size = [string boundingRectWithSize:CGSizeMake(width, 10000)
+                                     options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingTruncatesLastVisibleLine
+                                  attributes:attributeDic
+                                     context:nil].size;
+  
+  if ([UIScreen.mainScreen respondsToSelector:@selector(scale)]) {
+    if (UIScreen.mainScreen.scale == 2.0) {
+      UIGraphicsBeginImageContextWithOptions(size, NO, 1.0);
+    } else {
+      UIGraphicsBeginImageContext(size);
+    }
+  } else {
+    UIGraphicsBeginImageContext(size);
+  }
+  
+  CGContextRef context = UIGraphicsGetCurrentContext();
+  
+  [[UIColor whiteColor] set];
+  
+  CGRect rect = CGRectMake(0, 0, size.width + 1, size.height + 1);
+  
+  CGContextFillRect(context, rect);
+  
+  NSDictionary *attributes = @ {
+  NSForegroundColorAttributeName:[UIColor blackColor],
+  NSFontAttributeName:font
+  };
+  
+  [string drawInRect:rect withAttributes:attributes];
+  
+  UIImage *imageToPrint = UIGraphicsGetImageFromCurrentImageContext();
+  
+  UIGraphicsEndImageContext();
+  
+  return imageToPrint;
+}
+
+- (UIImage *)inversedImageWithString:(NSString *)string font:(UIFont *)font width:(CGFloat)width {
+    NSDictionary *attributeDic = @{NSFontAttributeName:font};
+    
+    CGSize size = [string boundingRectWithSize:CGSizeMake(width, 10000)
+                                       options:NSStringDrawingUsesLineFragmentOrigin | NSStringDrawingTruncatesLastVisibleLine
+                                    attributes:attributeDic
+                                       context:nil].size;
+    
+    if ([UIScreen.mainScreen respondsToSelector:@selector(scale)]) {
+        if (UIScreen.mainScreen.scale == 2.0) {
+            UIGraphicsBeginImageContextWithOptions(size, NO, 1.0);
+        } else {
+            UIGraphicsBeginImageContext(size);
+        }
+    } else {
+        UIGraphicsBeginImageContext(size);
+    }
+    
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    [[UIColor whiteColor] set];
+    
+    CGRect rect = CGRectMake(0, 0, size.width + 3, size.height + 3);
+    
+    CGContextFillRect(context, rect);
+    
+    [[UIColor blackColor] setStroke];
+    
+    //Set the width of the pen mark
+    CGContextSetLineWidth(context, 20);
+    
+    CGContextStrokeRect(context, rect);
+    
+    NSDictionary *attributes = @ {
+        NSForegroundColorAttributeName:[UIColor blackColor],
+                   NSFontAttributeName:font
+    };
+    
+    [string drawInRect:rect withAttributes:attributes];
+    
+    
+    UIImage *imageToPrint = UIGraphicsGetImageFromCurrentImageContext();
+    
+    UIGraphicsEndImageContext();
+    
+    return imageToPrint;
 }
 
 
