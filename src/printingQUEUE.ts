@@ -10,7 +10,7 @@ import {
 //   PRINTING_COMMANDS,
 //   EPOS_BOOLEANS,
 // } from 'react-native-esc-pos-printer/src/constants';
-import type { IMonitorStatus } from 'react-native-esc-pos-printer/src/types';
+import type { IMonitorStatus } from './types';
 // import { BufferHelper } from 'react-native-esc-pos-printer/src/utils/BufferHelper';
 
 const { EscPosPrinter } = NativeModules;
@@ -27,8 +27,7 @@ class PrintingQUEUE {
    * Create a new object
    *
    */
-  constructor() {
-  }
+  constructor() {}
 
   /**
    * Send the current array of commands to the printer
