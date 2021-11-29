@@ -7,7 +7,7 @@ import EscPosPrinter, {
   IPrinter,
 } from 'react-native-esc-pos-printer';
 import {} from 'react-native';
-
+import { base64Image } from './base64Image';
 export default function App() {
   const [init, setInit] = React.useState(false);
   const [printer, setPrinter] = React.useState<IPrinter | null>(null);
@@ -26,7 +26,7 @@ export default function App() {
         title="Discover"
         onPress={() => {
           console.log('discovering');
-          EscPosPrinter.discover({ usbSerialNumber: true })
+          EscPosPrinter.discover()
             .then((printers) => {
               console.log('done!', printers);
               if (printers[0]) {
@@ -47,6 +47,7 @@ export default function App() {
               await EscPosPrinter.init({
                 target: printer.target,
                 seriesName: getPrinterSeriesByName(printer.name),
+                language: 'EPOS2_LANG_EN',
               });
               setInit(true);
             }
@@ -70,6 +71,7 @@ export default function App() {
               await EscPosPrinter.init({
                 target: printer.target,
                 seriesName: getPrinterSeriesByName(printer.name),
+                language: 'EPOS2_LANG_EN',
               });
               setInit(true);
             }
@@ -91,6 +93,7 @@ export default function App() {
               await EscPosPrinter.init({
                 target: printer.target,
                 seriesName: getPrinterSeriesByName(printer.name),
+                language: 'EPOS2_LANG_EN',
               });
               setInit(true);
             }
@@ -122,6 +125,7 @@ export default function App() {
                 await EscPosPrinter.init({
                   target: printer.target,
                   seriesName: getPrinterSeriesByName(printer.name),
+                  language: 'EPOS2_LANG_EN',
                 });
                 setInit(true);
               }
@@ -148,6 +152,7 @@ export default function App() {
                 await EscPosPrinter.init({
                   target: printer.target,
                   seriesName: getPrinterSeriesByName(printer.name),
+                  language: 'EPOS2_LANG_EN',
                 });
                 setInit(true);
               }
@@ -156,8 +161,11 @@ export default function App() {
               const status = await printing
                 .initialize()
                 .align('center')
-                .size(6, 6)
+                .size(3, 3)
                 .line('DUDE!')
+                .smooth(true)
+                .line('DUDE!')
+                .smooth(false)
                 .size(1, 1)
                 .text('is that a ')
                 .bold()
@@ -167,7 +175,30 @@ export default function App() {
                 .underline()
                 .newline(2)
                 .align('center')
-                .imageAsset('store.png', 75)
+                .image(require('./store.png'), {
+                  width: 75,
+                  halftone: 'EPOS2_HALFTONE_THRESHOLD',
+                })
+                .image({ uri: base64Image }, { width: 75 })
+                .image(
+                  {
+                    uri:
+                      'https://raw.githubusercontent.com/tr3v3r/react-native-esc-pos-printer/main/ios/store.png',
+                  },
+                  { width: 75 }
+                )
+                .barcode({
+                  value: 'Test123',
+                  type: 'EPOS2_BARCODE_CODE93',
+                  width: 2,
+                  height: 50,
+                  hri: 'EPOS2_HRI_BELOW',
+                })
+                .qrcode({
+                  value: 'Test123',
+                  level: 'EPOS2_LEVEL_M',
+                  width: 5,
+                })
                 .cut()
                 .send();
 

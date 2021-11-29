@@ -1,5 +1,6 @@
 #import "EscPosPrinter.h"
 #import "ErrorManager.h"
+#import <React/RCTConvert.h>
 
 @interface EscPosPrinter() <Epos2PtrReceiveDelegate, Epos2PrinterSettingDelegate>
  @property (strong, nonatomic) NSString* printerAddress;
@@ -57,16 +58,74 @@ RCT_EXPORT_MODULE()
       @"COMMAND_ADD_NEW_LINE": @(COMMAND_ADD_NEW_LINE),
       @"COMMAND_ADD_TEXT_STYLE": @(COMMAND_ADD_TEXT_STYLE),
       @"COMMAND_ADD_TEXT_SIZE": @(COMMAND_ADD_TEXT_SIZE),
+      @"COMMAND_ADD_TEXT_SMOOTH": @(COMMAND_ADD_TEXT_SMOOTH),
       @"COMMAND_ADD_ALIGN": @(COMMAND_ADD_ALIGN),
       @"COMMAND_ADD_IMAGE_BASE_64": @(COMMAND_ADD_IMAGE_BASE_64),
+      @"COMMAND_ADD_IMAGE": @(COMMAND_ADD_IMAGE),
       @"COMMAND_ADD_IMAGE_ASSET": @(COMMAND_ADD_IMAGE_ASSET),
+      @"COMMAND_ADD_BARCODE": @(COMMAND_ADD_BARCODE),
+      @"COMMAND_ADD_QRCODE": @(COMMAND_ADD_QRCODE),
       @"COMMAND_ADD_CUT": @(COMMAND_ADD_CUT),
       @"COMMAND_ADD_DATA": @(COMMAND_ADD_DATA),
+      @"COMMAND_ADD_PULSE": @(COMMAND_ADD_PULSE),
       @"EPOS2_ALIGN_LEFT": @(EPOS2_ALIGN_LEFT),
       @"EPOS2_ALIGN_RIGHT": @(EPOS2_ALIGN_RIGHT),
       @"EPOS2_ALIGN_CENTER": @(EPOS2_ALIGN_CENTER),
       @"EPOS2_TRUE": @(EPOS2_TRUE),
       @"EPOS2_FALSE": @(EPOS2_FALSE),
+      @"EPOS2_LANG_EN": @(EPOS2_LANG_EN),
+      @"EPOS2_LANG_JA": @(EPOS2_LANG_JA),
+      @"EPOS2_LANG_ZH_CN": @(EPOS2_LANG_ZH_CN),
+      @"EPOS2_LANG_ZH_TW": @(EPOS2_LANG_ZH_TW),
+      @"EPOS2_LANG_KO": @(EPOS2_LANG_KO),
+      @"EPOS2_LANG_TH": @(EPOS2_LANG_TH),
+      @"EPOS2_LANG_VI": @(EPOS2_LANG_VI),
+      @"EPOS2_LANG_MULTI": @(EPOS2_LANG_MULTI),
+      @"EPOS2_BARCODE_UPC_A": @(EPOS2_BARCODE_UPC_A),
+      @"EPOS2_BARCODE_UPC_E": @(EPOS2_BARCODE_UPC_E),
+      @"EPOS2_BARCODE_EAN13": @(EPOS2_BARCODE_EAN13),
+      @"EPOS2_BARCODE_JAN13": @(EPOS2_BARCODE_JAN13),
+      @"EPOS2_BARCODE_EAN8": @(EPOS2_BARCODE_EAN8),
+      @"EPOS2_BARCODE_JAN8": @(EPOS2_BARCODE_JAN8),
+      @"EPOS2_BARCODE_CODE39": @(EPOS2_BARCODE_CODE39),
+      @"EPOS2_BARCODE_ITF": @(EPOS2_BARCODE_ITF),
+      @"EPOS2_BARCODE_CODABAR": @(EPOS2_BARCODE_CODABAR),
+      @"EPOS2_BARCODE_CODE93": @(EPOS2_BARCODE_CODE93),
+      @"EPOS2_BARCODE_CODE128": @(EPOS2_BARCODE_CODE128),
+      @"EPOS2_BARCODE_GS1_128": @(EPOS2_BARCODE_GS1_128),
+      @"EPOS2_BARCODE_GS1_DATABAR_OMNIDIRECTIONAL": @(EPOS2_BARCODE_GS1_DATABAR_OMNIDIRECTIONAL),
+      @"EPOS2_BARCODE_GS1_DATABAR_TRUNCATED": @(EPOS2_BARCODE_GS1_DATABAR_TRUNCATED),
+      @"EPOS2_BARCODE_GS1_DATABAR_LIMITED": @(EPOS2_BARCODE_GS1_DATABAR_LIMITED),
+      @"EPOS2_BARCODE_GS1_DATABAR_EXPANDED": @(EPOS2_BARCODE_GS1_DATABAR_EXPANDED),
+      @"EPOS2_BARCODE_CODE128_AUTO": @(EPOS2_BARCODE_CODE128_AUTO),
+      @"EPOS2_HRI_NONE": @(EPOS2_HRI_NONE),
+      @"EPOS2_HRI_ABOVE": @(EPOS2_HRI_ABOVE),
+      @"EPOS2_HRI_BELOW": @(EPOS2_HRI_BELOW),
+      @"EPOS2_HRI_BOTH": @(EPOS2_HRI_BOTH),
+      @"EPOS2_LEVEL_L": @(EPOS2_LEVEL_L),
+      @"EPOS2_LEVEL_M": @(EPOS2_LEVEL_M),
+      @"EPOS2_LEVEL_Q": @(EPOS2_LEVEL_Q),
+      @"EPOS2_LEVEL_H": @(EPOS2_LEVEL_H),
+      @"EPOS2_SYMBOL_QRCODE_MODEL_1": @(EPOS2_SYMBOL_QRCODE_MODEL_1),
+      @"EPOS2_SYMBOL_QRCODE_MODEL_2": @(EPOS2_SYMBOL_QRCODE_MODEL_2),
+
+       // Print image settings
+      @"EPOS2_COLOR_1": @(EPOS2_COLOR_1),
+      @"EPOS2_COLOR_2": @(EPOS2_COLOR_2),
+      @"EPOS2_COLOR_3": @(EPOS2_COLOR_3),
+      @"EPOS2_COLOR_4": @(EPOS2_COLOR_4),
+
+      @"EPOS2_MODE_MONO": @(EPOS2_MODE_MONO),
+      @"EPOS2_MODE_GRAY16": @(EPOS2_MODE_GRAY16),
+      @"EPOS2_MODE_MONO_HIGH_DENSITY": @(EPOS2_MODE_MONO_HIGH_DENSITY),
+
+      @"EPOS2_HALFTONE_DITHER": @(EPOS2_HALFTONE_DITHER),
+      @"EPOS2_HALFTONE_ERROR_DIFFUSION": @(EPOS2_HALFTONE_ERROR_DIFFUSION),
+      @"EPOS2_HALFTONE_THRESHOLD": @(EPOS2_HALFTONE_THRESHOLD),
+
+      // Add pulse settings
+      @"EPOS2_DRAWER_2PIN": @(EPOS2_DRAWER_2PIN),
+      @"EPOS2_DRAWER_5PIN": @(EPOS2_DRAWER_5PIN),
    };
 }
 
@@ -79,7 +138,12 @@ enum PrintingCommands : int {
     COMMAND_ADD_IMAGE_BASE_64,
     COMMAND_ADD_IMAGE_ASSET,
     COMMAND_ADD_CUT,
-    COMMAND_ADD_DATA
+    COMMAND_ADD_DATA,
+    COMMAND_ADD_IMAGE,
+    COMMAND_ADD_TEXT_SMOOTH,
+    COMMAND_ADD_BARCODE,
+    COMMAND_ADD_QRCODE,
+    COMMAND_ADD_PULSE
 };
 
 + (BOOL)requiresMainQueueSetup
@@ -89,11 +153,12 @@ enum PrintingCommands : int {
 
 RCT_EXPORT_METHOD(init:(NSString *)target
                   series:(int)series
+                  lang:(int)lang
                   withResolver:(RCTPromiseResolveBlock)resolve
                   withRejecter:(RCTPromiseRejectBlock)reject)
 {
     [self finalizeObject];
-    [self initializeObject: series onSuccess:^(NSString *result) {
+    [self initializeObject: series lang:lang onSuccess:^(NSString *result) {
         resolve(result);
     } onError:^(NSString *error) {
        reject(@"event_failure",error, nil);
@@ -325,6 +390,7 @@ RCT_EXPORT_METHOD(printQUEUE: (NSArray *)printCommands
 
 
 - (void)initializeObject: (int)series
+                          lang:(int)lang
                           onSuccess: (void(^)(NSString *))onSuccess
                           onError: (void(^)(NSString *))onError
 {
@@ -342,7 +408,7 @@ RCT_EXPORT_METHOD(printQUEUE: (NSArray *)printCommands
     }
 
     [printer setReceiveEventDelegate:self];
-
+    [printer addTextLang:lang];
     NSString *successString = [ErrorManager getEposErrorText: EPOS2_SUCCESS];
     onSuccess(successString);
 }
@@ -543,32 +609,30 @@ RCT_EXPORT_METHOD(printQUEUE: (NSArray *)printCommands
     return newImage;
 }
 
-- (enum Epos2ErrorStatus)printFromImage: (NSString*)base64encodeStr width:(int)width
-{
+- (int)printImage:(UIImage *)imageData
+                  width:(NSInteger)width
+                  color:(int)color
+                  mode:(int)mode
+                  halftone:(int)halftone
+                  brightness:(CGFloat)brightness
 
+{
     int result = EPOS2_SUCCESS;
 
-    int color = EPOS2_COLOR_1;
-    int mode = EPOS2_MODE_GRAY16;
-    int halftone = EPOS2_HALFTONE_ERROR_DIFFUSION;
-    double brightness = 1.0;
-    int compress = EPOS2_COMPRESS_DEFLATE;
+    NSInteger imgHeight = imageData.size.height;
+    NSInteger imagWidth = imageData.size.width;
 
-    NSData *decoded = [[NSData alloc] initWithBase64EncodedString:base64encodeStr options:0 ];
-    UIImage *srcImage = [[UIImage alloc] initWithData:decoded scale:1];
-    NSData *jpgData = UIImageJPEGRepresentation(srcImage, 1);
-    UIImage *jpgImage = [[UIImage alloc] initWithData:jpgData];
-
-    NSInteger x = 0;
-    NSInteger y = 0;
-
-    NSInteger imgHeight = jpgImage.size.height;
-    NSInteger imagWidth = jpgImage.size.width;
-    NSLog(@"width: %li height: %li",imagWidth, imgHeight);
     CGSize size = CGSizeMake(width, imgHeight*width/imagWidth);
-    UIImage *scaled = [self scaleImage:jpgImage scaledToFillSize:size];
-    NSLog(@"width: %f height: %f",size.width, size.height);
-    result = [self->printer addImage:scaled x:x y:y width:size.width height:size.height color:color mode:mode halftone:halftone brightness:brightness compress:compress];
+    UIImage *scaled = [self scaleImage:imageData scaledToFillSize:size];
+
+    result = [self->printer addImage:scaled x:0 y:0
+      width: size.width
+      height: size.height
+      color: color
+      mode: mode
+      halftone: halftone
+      brightness: brightness
+      compress:EPOS2_COMPRESS_AUTO];
 
     return result;
 }
@@ -576,7 +640,7 @@ RCT_EXPORT_METHOD(printQUEUE: (NSArray *)printCommands
 - (enum Epos2ErrorStatus)handleCommand: (enum PrintingCommands)command params:(NSArray*)params {
     int result = EPOS2_SUCCESS;
     NSString* text = @"";
-
+    NSError *error = nil;
     switch(command) {
         case COMMAND_ADD_TEXT  :
             text = params[0];
@@ -584,6 +648,9 @@ RCT_EXPORT_METHOD(printQUEUE: (NSArray *)printCommands
           break;
         case COMMAND_ADD_NEW_LINE :
             result = [self->printer addFeedLine:[params[0] intValue]];
+          break;
+        case COMMAND_ADD_PULSE :
+            result = [self->printer addPulse:[params[0] intValue] time:EPOS2_PARAM_DEFAULT];
           break;
         case COMMAND_ADD_TEXT_STYLE :
             result = [self->printer addTextStyle:EPOS2_FALSE ul:[params[0] intValue] em:[params[1] intValue] color:EPOS2_COLOR_1];
@@ -617,9 +684,53 @@ RCT_EXPORT_METHOD(printQUEUE: (NSArray *)printCommands
               compress:EPOS2_COMPRESS_AUTO];
           break;
         }
-        case COMMAND_ADD_IMAGE_BASE_64 :
-            result = [self printFromImage:params[0] width:[params[1] intValue]];
+        case COMMAND_ADD_IMAGE_BASE_64 : {
+            NSString *urlString = params[0];
+            NSURL *imageURL = [NSURL URLWithString:urlString];
+            NSData *jpgData = [NSData dataWithContentsOfURL:imageURL options:NSDataReadingUncached error:&error];
+
+            UIImage *imageData = [[UIImage alloc] initWithData:jpgData];
+
+            NSInteger imgHeight = imageData.size.height;
+            NSInteger imagWidth = imageData.size.width;
+
+            NSInteger width = [params[1] intValue];
+
+            CGSize size = CGSizeMake(width, imgHeight*width/imagWidth);
+            UIImage *scaled = [self scaleImage:imageData scaledToFillSize:size];
+
+
+            result = [self->printer addImage:scaled x:0 y:0
+              width: size.width
+              height: size.height
+              color:EPOS2_COLOR_1
+              mode:EPOS2_MODE_MONO
+              halftone:EPOS2_HALFTONE_DITHER
+              brightness:EPOS2_PARAM_DEFAULT
+              compress:EPOS2_COMPRESS_AUTO];
+            break;
+        }
+        case COMMAND_ADD_IMAGE : {
+            NSDictionary *imageObj = params[0];
+            NSString * urlString = imageObj[@"uri"];
+            UIImage * imageData;
+            if([urlString hasPrefix: @"http"] || [urlString hasPrefix: @"https"]) {
+              NSURL *url = [NSURL URLWithString: urlString];
+              NSData *data = [NSData dataWithContentsOfURL:url];
+              imageData = [[UIImage alloc] initWithData:data];
+            } else {
+              imageData = [RCTConvert UIImage:imageObj];
+            }
+
+            result = [self printImage:imageData
+                           width: [params[1] intValue]
+                           color: [params[2] intValue]
+                           mode: [params[3] intValue]
+                           halftone: [params[4] intValue]
+                           brightness: [params[5] floatValue]
+                      ];
           break;
+        }
         case COMMAND_ADD_CUT :
             result = [self->printer addCut:EPOS2_CUT_FEED];
           break;
@@ -629,7 +740,15 @@ RCT_EXPORT_METHOD(printQUEUE: (NSArray *)printCommands
            result = [self->printer addCommand:data];
           break;
         }
-           
+        case COMMAND_ADD_TEXT_SMOOTH :
+            result = [self->printer addTextSmooth:[params[0] intValue]];
+          break;
+        case COMMAND_ADD_BARCODE :
+            result = [self->printer addBarcode:params[0] type:[params[1] intValue] hri:[params[2] intValue] font:EPOS2_FONT_A width:[params[3] intValue] height:[params[4] intValue]];
+          break;
+        case COMMAND_ADD_QRCODE :
+            result = [self->printer addSymbol:params[0] type:[params[1] intValue] level:[params[2] intValue] width:[params[3] intValue] height:[params[3] intValue] size:[params[3] intValue]];
+          break;
     }
 
     return result;

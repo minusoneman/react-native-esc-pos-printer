@@ -23,6 +23,7 @@ import {
   FONT_A_CHARS_PER_LINE,
   DEFAULT_FONT_A_CHARS_PER_LINE,
   DEFAULT_PAPER_WIDTHT,
+  PRINTER_LANGUAGE,
 } from './constants';
 
 const { EscPosPrinter, EscPosPrinterDiscovery } = NativeModules;
@@ -33,9 +34,20 @@ import printing from './printing';
 import printingQUEUE from './printingQUEUE';
 
 const _default = {
-  init({ target, seriesName }: IPrinterInitParams): Promise<number> {
+  init({
+    target,
+    seriesName,
+    language = 'EPOS2_LANG_EN',
+  }: IPrinterInitParams): Promise<number> {
     const series = PRINTER_SERIES[seriesName];
-    return EscPosPrinter.init(target, series);
+    let lang;
+    if (typeof PRINTER_LANGUAGE[language] === 'number') {
+      lang = PRINTER_LANGUAGE[language];
+    } else {
+      console.warn('An invalid parameter of language was passed.');
+      lang = PRINTER_LANGUAGE.EPOS2_LANG_EN;
+    }
+    return EscPosPrinter.init(target, series, lang);
   },
   async discover(params?: IDiscoverParams): Promise<IPrinter[]> {
     if (
@@ -56,14 +68,8 @@ const _default = {
             removeListener();
           }
         );
-        let promise;
-        if (Platform.OS === 'ios') {
-          promise = EscPosPrinterDiscovery.discover();
-        } else {
-          promise = EscPosPrinterDiscovery.discover(params);
-        }
 
-        promise
+        EscPosPrinterDiscovery.discover(params)
           .then(() => {
             removeListener();
             res([]);
@@ -165,7 +171,7 @@ const _default = {
   printingQUEUE,
 };
 
-export { getPrinterSeriesByName, PRINTER_SERIES };
+export { getPrinterSeriesByName, PRINTER_SERIES, PRINTER_LANGUAGE };
 export type {
   PrinerEvents,
   EventListenerCallback,
